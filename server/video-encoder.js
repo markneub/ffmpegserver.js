@@ -145,6 +145,17 @@ function VideoEncoder(client, server, id, options) {
       }
       args.push(videoname)
 
+      var createFinalVideo = function() {
+        const util = require('util');
+        const exec = util.promisify(require('child_process').exec);
+
+        async function final_ffmpeg() {
+          const { stdout, stderr } = await exec('echo hi');
+          console.log('stdout:', stdout);
+          console.log('stderr:', stderr);
+        }
+        final_ffmpeg()
+      }
 
       var createVfrVideo = function(videoname) {
         const util = require('util');
@@ -154,6 +165,7 @@ function VideoEncoder(client, server, id, options) {
           const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr.mp4') + ' -t' + path.join(options.frameDir, 'timestamps.txt ') + videoname);
           console.log('stdout:', stdout);
           console.log('stderr:', stderr);
+          createFinalVideo()
         }
         mp4fpsmod();
       }
@@ -251,11 +263,23 @@ function VideoEncoder(client, server, id, options) {
     });
   }
 
+  var handleAudioFile = function(data) {
+    // TODO uniquely identify audio file. determine correct type?
+    var filename = path.join(options.frameDir, "track.mp3");
+    fs.writeFile(filename, data, {encoding: 'base64'}, function(err) {
+        if(err) {
+            return console.log(err);
+        }
+        console.log(filename + ' written successfully');
+    });
+  }
+
   var messageHandlers = {
     start: handleStart,
     frame: handleFrame,
     end: handleEnd,
-    timestamps: handleTimestamps
+    timestamps: handleTimestamps,
+    audiofile: handleAudioFile
   };
 
   var onMessage = function(message) {
