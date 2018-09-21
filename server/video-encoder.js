@@ -150,7 +150,7 @@ function VideoEncoder(client, server, id, options) {
         const exec = util.promisify(require('child_process').exec);
 
         async function final_ffmpeg() {
-          const { stdout, stderr } = await exec('echo hi');
+          const { stdout, stderr } = await exec('ffmpeg -i ' + path.join(options.frameDir, 'vfr.mp4') + ' -i ' + path.join(options.frameDir, 'track.mp3') + ' -map 0:v -map 1:a -shortest ' + path.join(options.frameDir, 'final-cfr.mp4'));
           console.log('stdout:', stdout);
           console.log('stderr:', stderr);
         }
