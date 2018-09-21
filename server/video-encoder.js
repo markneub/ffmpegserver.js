@@ -146,6 +146,18 @@ function VideoEncoder(client, server, id, options) {
       args.push(videoname)
 
 
+      var createVfrVideo = function(videoname) {
+        const util = require('util');
+        const exec = util.promisify(require('child_process').exec);
+
+        async function mp4fpsmod() {
+          const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr.mp4') + ' -t' + path.join(options.frameDir, 'timestamps.txt ') + videoname);
+          console.log('stdout:', stdout);
+          console.log('stderr:', stderr);
+        }
+        mp4fpsmod();
+      }
+
       var handleFFMpegError = function(result) {
         debug("error running ffmpeg: " + JSON.stringify(result));
         sendCmd("error", { result: result });
@@ -159,6 +171,10 @@ function VideoEncoder(client, server, id, options) {
         .then(function(fileInfo) {
           sendCmd("end", fileInfo);
           cleanup();
+
+          // run mp4fps mod to produce vfr video
+          createVfrVideo(videoname)
+
           name = undefined;
         })
         .catch(function(e) {
@@ -223,10 +239,23 @@ function VideoEncoder(client, server, id, options) {
     checkForEnd();
   };
 
+  var handleTimestamps = function(data) {
+    // TODO uniquely identify timestamps file. for some reason name is undefined here.
+    var filename = path.join(options.frameDir, "timestamps.txt");
+    console.log("saving timestamp data to " + filename)
+    fs.writeFile(filename, data, function(err) {
+      if(err) {
+          return console.log(err);
+      }
+      console.log(filename + " written successfully");
+    });
+  }
+
   var messageHandlers = {
     start: handleStart,
     frame: handleFrame,
     end: handleEnd,
+    timestamps: handleTimestamps
   };
 
   var onMessage = function(message) {
