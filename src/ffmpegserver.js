@@ -79,7 +79,8 @@ define([
         }
         if (scriptNames[scriptName]) {
           var u = new URL(script.src);
-          var url = "wss://" + u.host;
+          var wsPrefix = !u.host.indexOf('localhost') ? 'ws://' : 'wss://';
+          var url = wsPrefix + u.host;
           return url;
         }
       }
