@@ -696,6 +696,7 @@ define('src/frameencoder',[
     };
 
     _socket = options.socket || new VirtualSocket(options);
+    window.socket = _socket
     _socket.on('connect', connected_.bind(this));  // eslint-disable-line
     _socket.on('message', processMessage_.bind(this));
     _socket.on('disconnect', disconnected_.bind(this));  // eslint-disable-line

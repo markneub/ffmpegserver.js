@@ -116,6 +116,11 @@ function VideoEncoder(client, server, id, options) {
         frames = [];
       }
     }
+    // clean up additional intermediate files
+    utils.deleteNoFail(path.join(options.videoDir, 'ts-' + name + '.txt')) // timestamps
+    utils.deleteNoFail(path.join(options.videoDir, 'vfr-' + name + '.mp4')) // vfr video
+    utils.deleteNoFail(path.join(options.videoDir, name + '.mp3')) // audio track
+    utils.deleteNoFail(path.join(options.videoDir, name + '.mp4')) // initial rendered video
   };
 
   var checkForEnd = function() {
@@ -145,31 +150,6 @@ function VideoEncoder(client, server, id, options) {
       }
       args.push(videoname)
 
-      var createFinalVideo = function() {
-        const util = require('util');
-        const exec = util.promisify(require('child_process').exec);
-
-        async function final_ffmpeg() {
-          const { stdout, stderr } = await exec('ffmpeg -i ' + path.join(options.frameDir, 'vfr.mp4') + ' -i ' + path.join(options.frameDir, 'track.mp3') + ' -map 0:v -map 1:a -shortest ' + path.join(options.frameDir, 'final-cfr.mp4'));
-          console.log('stdout:', stdout);
-          console.log('stderr:', stderr);
-        }
-        final_ffmpeg()
-      }
-
-      var createVfrVideo = function(videoname) {
-        const util = require('util');
-        const exec = util.promisify(require('child_process').exec);
-
-        async function mp4fpsmod() {
-          const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr.mp4') + ' -t' + path.join(options.frameDir, 'timestamps.txt ') + videoname);
-          console.log('stdout:', stdout);
-          console.log('stderr:', stderr);
-          createFinalVideo()
-        }
-        mp4fpsmod();
-      }
-
       var handleFFMpegError = function(result) {
         debug("error running ffmpeg: " + JSON.stringify(result));
         sendCmd("error", { result: result });
@@ -182,12 +162,9 @@ function VideoEncoder(client, server, id, options) {
         server.addFile(videoname)
         .then(function(fileInfo) {
           sendCmd("end", fileInfo);
-          cleanup();
 
-          // run mp4fps mod to produce vfr video
+          // run mp4fpsmod to produce vfr video
           createVfrVideo(videoname)
-
-          name = undefined;
         })
         .catch(function(e) {
           console.log("error adding file: " + videoname);
@@ -206,6 +183,34 @@ function VideoEncoder(client, server, id, options) {
       runner.on('done', handleFFMpegDone);
       runner.on('frame', handleFFMpegFrame);
     }
+  }
+
+  var createFinalVideo = function() {
+    const util = require('util');
+    const exec = util.promisify(require('child_process').exec);
+
+    async function final_ffmpeg() {
+      const { stdout, stderr } = await exec('ffmpeg -i ' + path.join(options.frameDir, 'vfr-' + name + '.mp4') + ' -i ' + path.join(options.frameDir, name + '.mp3') + ' -map 0:v -map 1:a -shortest ' + path.join(options.frameDir, 'cfr-'+name+'.mp4'));
+      console.log('stdout:', stdout);
+      console.log('stderr:', stderr);
+
+      cleanup();
+      // name = undefined;
+    }
+    final_ffmpeg()
+  }
+
+  var createVfrVideo = function(videoname) {
+    const util = require('util');
+    const exec = util.promisify(require('child_process').exec);
+
+    async function mp4fpsmod() {
+      const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr-'+name+'.mp4') + ' -t' + path.join(options.frameDir, 'ts-' + name + '.txt ') + videoname);
+      console.log('stdout:', stdout);
+      console.log('stderr:', stderr);
+      createFinalVideo()
+    }
+    mp4fpsmod();
   }
 
   var EXPECTED_HEADER = 'data:image/png;base64,';
@@ -252,8 +257,7 @@ function VideoEncoder(client, server, id, options) {
   };
 
   var handleTimestamps = function(data) {
-    // TODO uniquely identify timestamps file. for some reason name is undefined here.
-    var filename = path.join(options.frameDir, "timestamps.txt");
+    var filename = path.join(options.frameDir, "ts-" + name + ".txt");
     console.log("saving timestamp data to " + filename)
     fs.writeFile(filename, data, function(err) {
       if(err) {
@@ -265,7 +269,7 @@ function VideoEncoder(client, server, id, options) {
 
   var handleAudioFile = function(data) {
     // TODO uniquely identify audio file. determine correct type?
-    var filename = path.join(options.frameDir, "track.mp3");
+    var filename = path.join(options.frameDir, name + ".mp3");
     fs.writeFile(filename, data, {encoding: 'base64'}, function(err) {
         if(err) {
             return console.log(err);
