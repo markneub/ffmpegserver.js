@@ -159,17 +159,8 @@ function VideoEncoder(client, server, id, options) {
 
       var handleFFMpegDone = function(result) {
         console.log("converted frames to: " + videoname);
-        server.addFile(videoname)
-        .then(function(fileInfo) {
-          sendCmd("end", fileInfo);
-
-          // run mp4fpsmod to produce vfr video
-          createVfrVideo(videoname)
-        })
-        .catch(function(e) {
-          console.log("error adding file: " + videoname);
-          throw e;
-        });
+        // run mp4fpsmod to produce vfr video
+        createVfrVideo(videoname)
       };
 
       var handleFFMpegFrame = function(frameNum) {
@@ -190,12 +181,23 @@ function VideoEncoder(client, server, id, options) {
     const exec = util.promisify(require('child_process').exec);
 
     async function final_ffmpeg() {
-      const { stdout, stderr } = await exec('ffmpeg -i ' + path.join(options.frameDir, 'vfr-' + name + '.mp4') + ' -i ' + path.join(options.frameDir, name + '.mp3') + ' -map 0:v -map 1:a -shortest ' + path.join(options.frameDir, 'cfr-'+name+'.mp4'));
+      console.log('writing final video...')
+      var cmd = 'ffmpeg -y -i ' + path.join(options.frameDir, 'vfr-' + name + '.mp4') + ' -i ' + path.join(options.frameDir, name + '.mp3') + ' -map 0:v -map 1:a -shortest ' + path.join(options.frameDir, 'cfr-'+name+'.mp4')
+      console.log(cmd)
+      const { stdout, stderr } = await exec(cmd);
+      console.log('???')
       console.log('stdout:', stdout);
       console.log('stderr:', stderr);
 
-      cleanup();
-      // name = undefined;
+      server.addFile(path.join(options.frameDir, 'cfr-'+name+'.mp4'))
+        .then(function(fileInfo) {
+          sendCmd("end", fileInfo);
+          cleanup();
+        })
+        .catch(function(e) {
+          console.log("error adding file: " + path.join(options.frameDir, 'cfr-'+name+'.mp4'));
+          throw e;
+      });
     }
     final_ffmpeg()
   }
@@ -205,9 +207,9 @@ function VideoEncoder(client, server, id, options) {
     const exec = util.promisify(require('child_process').exec);
 
     async function mp4fpsmod() {
-      const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr-'+name+'.mp4') + ' -t' + path.join(options.frameDir, 'ts-' + name + '.txt ') + videoname);
-      console.log('stdout:', stdout);
-      console.log('stderr:', stderr);
+      const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr-'+name+'.mp4') + ' -t ' + path.join(options.frameDir, 'ts-' + name + '.txt ') + videoname);
+      console.log('stdout:', stdout, '\n');
+      console.log('stderr:', stderr, '\n');
       createFinalVideo()
     }
     mp4fpsmod();
