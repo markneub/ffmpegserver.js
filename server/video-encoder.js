@@ -168,23 +168,32 @@ function VideoEncoder(client, server, id, options) {
       runner.on('error', handleFFMpegError);
       runner.on('frame', handleFFMpegFrame);
       runner.on('done', function(result) {
-        console.log("converted frames to: " + videoname);
-        createVfrVideo(videoname) // run mp4fpsmod to produce vfr video
+        console.log("converted " + frames.length + " frames to: " + videoname);
+        createVfrVideo(videoname)
       });
     }
 
     function createVfrVideo(videoname) {
-      const exec = util.promisify(require('child_process').exec);
-  
-      async function mp4fpsmod() {
-        const { stdout, stderr } = await exec('mp4fpsmod -o ' + path.join(options.frameDir, 'vfr-'+name+'.mp4') + ' -t ' + path.join(options.frameDir, 'ts-' + name + '.txt ') + videoname);
-        console.log('stdout:', stdout, '\n');
-        console.log('stderr:', stderr, '\n');
-        createFinalVideo()
-      }
-      mp4fpsmod();
+      const { spawn } = require('child_process')
+      const args = [
+        '-o', path.join(options.frameDir, 'vfr-' + name + '.mp4'),
+        '-t', path.join(options.frameDir, 'ts-' + name + '.txt'),
+        videoname
+      ]
+      console.log('mp4fpsmod ' + args.join(' '))
+      const mp4fpsmod = spawn('mp4fpsmod', args)
+
+      mp4fpsmod.stdout.on('data', (data) => {
+        console.log(`stdout: ${data}`)
+      });
+      
+      mp4fpsmod.stderr.on('data', (data) => {
+        console.log(`stderr: ${data}`)
+      });
+      
+      mp4fpsmod.on('close', createFinalVideo)
     }
-    
+
     function createFinalVideo() {
       const exec = util.promisify(require('child_process').exec);
   
