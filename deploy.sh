@@ -1,4 +1,4 @@
 #!/bin/bash
 set -euo pipefail
 
-rsync -avz --delete ./ markneub@pasteur.cc:~/ffmpegserver
+rsync -avz --delete --exclude=output ./ markneub@pasteur.cc:~/ffmpegserver
