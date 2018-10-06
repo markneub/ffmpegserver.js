@@ -22,7 +22,7 @@
     "busboy": "^0.2.11",
     "debug": "^2.2.0",
     "express": "^4.13.3",
-    "ffmpeg-static": "^1.0.0",
+    "ffmpeg-static": "2.3.0",
     "optionator": "^0.6.0",
     "tmp": "0.0.27",
     "ws": "git+https://github.com/websockets/ws.git#7d071120333b8fa8d76d91e08884f81d97a441d0"

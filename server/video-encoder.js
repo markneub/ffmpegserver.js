@@ -78,6 +78,7 @@ function VideoEncoder(client, server, id, options) {
   var connected = true;
   var ffmpegArguments;
   var textoverlay = '';
+  var videoLength = 0;
 
   debug("" + id + ": start encoder");
 
@@ -214,19 +215,20 @@ function VideoEncoder(client, server, id, options) {
     function createFinalVideo() {
       console.log('Writing text overlay to video...')
 
+      let threeSecsFromEnd = (videoLength - 3000) / 1000
       // user defined text
       // - display start
       // - display end
       // - fade out duration
       // - fade in duration
       let DS = 0,
-          DE = 13,
+          DE = threeSecsFromEnd,
           FOD = 0.25,
           FID = 0
 
       // pasteur tagline
-      let DS2 = 13,
-          DE2 = 25,
+      let DS2 = threeSecsFromEnd,
+          DE2 = 9999,
           FOD2 = 0,
           FID2 = 0.25
 
@@ -234,12 +236,14 @@ function VideoEncoder(client, server, id, options) {
         '-y',
         '-i', path.join(options.frameDir, 'cfr-' + name + '.mp4'),
         '-filter_complex',
-          '"drawbox=x=0:',
-          'y=ih-17:',
-          'w=640:',
-          'h=17:',
-          'color=black:',
-          't=100,', // covers for version incompatibility between ffmpeg 3 and 4 (max vs fill)
+          // '"drawbox=x=0:',
+          // 'y=ih-17:',
+          // 'w=640:',
+          // 'h=17:',
+          // 'color=black:',
+          // 't=100,', // covers for version incompatibility between ffmpeg 3 and 4 (max vs fill)
+
+          '"pad=width=512:height=529:x=0:y=0:color=black,',
 
           'drawtext=fontfile=' + path.resolve(__dirname, '../font/', 'SourceCodePro-SemiBold.ttf') + ':',
           'text=\'' + textoverlay + '\':',
@@ -255,7 +259,7 @@ function VideoEncoder(client, server, id, options) {
           'fontcolor=efebff:',
           'fontsize=14:',
           'x=(w-text_w)/2:',
-          'y=(h-text_h)-4:',
+          'y=(h-text_h)-3:',
           'ft_load_flags=default:',
           'fontcolor_expr=efebff%{eif\\\\\\\\: clip(255*(1*between(t\\\\, ' + (DS2 + FID2) + '\\\\, ' + (DE2 - FOD2) + ') + ((t - ' + DS2 + ')/(' + (FID2 + 0.00001) + '))*between(t\\\\, ' + DS2 + '\\\\, ' + (DS2 + FID2) + ') + (-(t - ' + DE2 + ')/(' + (FOD2 + 0.00001) + '))*between(t\\\\, ' + (DE2 - FOD2) + '\\\\, ' + DE2 + ') )\\\\, 0\\\\, 255) \\\\\\\\: x\\\\\\\\: 2 }"',
         '-codec:a', 'copy',
@@ -345,9 +349,10 @@ function VideoEncoder(client, server, id, options) {
     });
   }
 
-  var handleTextOverlay = function(data) {
-    console.log('Received text overlay: ' + data)
-    textoverlay = data.toUpperCase()
+  var handleMeta = function(data) {
+    textoverlay = data.textOverlay.toUpperCase()
+    videoLength = data.videoLength
+    console.log('Received metadata: text overlay: \'' + textoverlay + '\', video length: ' + videoLength)
   }
 
   var messageHandlers = {
@@ -356,7 +361,7 @@ function VideoEncoder(client, server, id, options) {
     end: handleEnd,
     timestamps: handleTimestamps,
     audiofile: handleAudioFile,
-    textoverlay: handleTextOverlay
+    meta: handleMeta
   };
 
   var onMessage = function(message) {
