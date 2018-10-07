@@ -215,19 +215,24 @@ function VideoEncoder(client, server, id, options) {
     function createFinalVideo() {
       console.log('Writing text overlay to video...')
 
-      let threeSecsFromEnd = (videoLength - 3000) / 1000
+      let nearEndMap = {
+        10000: 6,
+        15000: 10,
+        30000: 23
+      }
+      let nearEnd = nearEndMap[videoLength]
       // user defined text
       // - display start
       // - display end
       // - fade out duration
       // - fade in duration
       let DS = 0,
-          DE = threeSecsFromEnd,
+          DE = nearEnd,
           FOD = 0.25,
           FID = 0
 
       // pasteur tagline
-      let DS2 = threeSecsFromEnd,
+      let DS2 = nearEnd,
           DE2 = 9999,
           FOD2 = 0,
           FID2 = 0.25
@@ -247,7 +252,7 @@ function VideoEncoder(client, server, id, options) {
           // 'color=black:',
           // 't=100,', // covers for version incompatibility between ffmpeg 3 and 4 (max vs fill)
 
-          '"pad=width=512:height=529:x=0:y=0:color=black,',
+          '"pad=width=512:height=512:x=0:y=0:color=black,',
 
           'drawtext=fontfile=' + fontPath + ':',
           'text=\'' + textoverlay + '\':',
