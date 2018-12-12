@@ -5,7 +5,7 @@
   "main": "start.js",
   "scripts": {
     "test": "node node_modules/mocha/bin/mocha --recursive",
-    "start": "node start.js"
+    "start": "node --port 8081 start.js"
   },
   "keywords": [
     "video",
