@@ -79,6 +79,7 @@ function VideoEncoder(client, server, id, options) {
   var ffmpegArguments;
   var textoverlay = '';
   var videoLength = 0;
+  var renderWidth = 0;
 
   debug("" + id + ": start encoder");
 
@@ -237,7 +238,7 @@ function VideoEncoder(client, server, id, options) {
           FOD2 = 0,
           FID2 = 0.25
 
-      const outputLength = 540 // set in frontend
+      const outputLength = renderWidth
       const outputWidth = outputLength
       const outputHeight = outputLength
       const textPad = outputLength / 135
@@ -367,7 +368,8 @@ function VideoEncoder(client, server, id, options) {
   var handleMeta = function(data) {
     textoverlay = data.textOverlay.toUpperCase()
     videoLength = data.videoLength
-    console.log('Received metadata: text overlay: \'' + textoverlay + '\', video length: ' + videoLength)
+    renderWidth = data.renderWidth
+    console.log('Received metadata: text overlay: \'' + textoverlay + '\', video length: ' + videoLength + '\', renderWidth: ' + renderWidth)
   }
 
   var messageHandlers = {
